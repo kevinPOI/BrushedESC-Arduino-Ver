@@ -1,0 +1,223 @@
+
+#include <EEPROM.h>
+#define fw 5
+#define bw 6
+
+#define fw2 7
+#define bw2 8
+
+
+#define led 4
+#define MaxAddr1 5
+#define MaxAddr2 6
+#define MinAddr1 7
+#define MinAddr2 8
+#define MaxAddr3 9
+#define MaxAddr4 10
+#define MinAddr3 11
+#define MinAddr4 12
+
+
+#define thr 0
+#define thr2 1
+long thrValue=0;
+long thr2Value = 0;
+char direction = 'f';
+char direction2 = 'f';
+int thrMax, thrMin,thr2Max, thr2Min;
+void calibrate();
+void readConfig();
+
+
+
+
+void setup() {//
+  //Serial.begin(115200);
+  pinMode(fw,OUTPUT);
+  pinMode(thr,INPUT);
+  pinMode(led,OUTPUT);
+  delay(400);
+  thrMax = 2000;
+  thrMin = 1000;
+
+if((pulseIn(thr,HIGH) > 1650) && (pulseIn(thr,HIGH) < 2500)&&(pulseIn(thr2,HIGH) > 1650) && (pulseIn(thr2,HIGH) < 2500))
+{
+  calibrate();
+}
+  readConfig();
+while(((pulseIn(thr,HIGH) > thrMax - (thrMax - thrMin)/2 + 60)||(pulseIn(thr,HIGH) < thrMin + (thrMax - thrMin)/2 - 60))
+      || ((pulseIn(thr2, HIGH)> thrMax - (thrMax - thrMin)/2+60)||(pulseIn(thr2,HIGH)<thrMin + (thrMax-thrMin)/2 -60))){
+  digitalWrite(led,HIGH);
+  analogWrite(fw,10);
+  delay(300);
+  analogWrite(fw,0);
+  digitalWrite(led,LOW);
+  delay(300);
+}
+  
+}
+  
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  thrValue = pulseIn(thr,HIGH);
+  thr2Value = pulseIn(thr2, HIGH);
+  
+  
+
+  thrValue = (thrValue - thrMin)*255/(thrMax - thrMin);
+  thr2Value = (thr2Value - thrMin)*255/(thrMax - thrMin);
+
+  //Serial.write("thr output is");
+  //Serial.println(thrValue);
+  if(thrValue > 265){
+    thrValue = 128;
+    
+  }
+  if(thrValue > 253){
+    thrValue = 255;
+  }
+  if(thrValue < -30){
+    thrValue = 128;
+    
+  }
+  
+  if(thrValue < 2){
+    thrValue = 1;
+  }
+  if(thrValue > 137&& direction == 'f'){
+    analogWrite(bw,0);
+    analogWrite(fw, (thrValue-128)*2);
+    digitalWrite(led,HIGH);
+  }else if(thrValue > 137 && direction == 'b'){
+    direction = 'f';
+    analogWrite(fw,0);
+    analogWrite(bw,0);
+    delay(20);
+    digitalWrite(led,HIGH);
+    //Serial.println("switched");
+  }
+  else if (thrValue > 117){
+    analogWrite(fw,0);
+    analogWrite(bw,0);
+    digitalWrite(led,LOW);
+  }else if(thrValue <117&&direction == 'b'){
+    analogWrite(fw,0);
+    analogWrite(bw,(128-thrValue)*2);
+    digitalWrite(led,HIGH);
+  }else if(thrValue <117&&direction == 'f'){
+    direction = 'b';
+    analogWrite(fw,0);
+    analogWrite(bw,0);
+    delay(20);
+    digitalWrite(led,HIGH);
+  }else{
+    delay (80);
+    //Serial.println(thrValue);
+  }
+  //Channel 2--------------------------------------------------------------------------------------------------------------------------------------------
+  if(thr2Value > 265){
+    thr2Value = 128;
+  }
+  if(thr2Value > 253){
+    thr2Value = 255;
+  }
+  if(thr2Value < -30){
+    thr2Value = 128;
+    
+  }
+  if(thr2Value < 2){
+    thr2Value = 1;
+  }
+  if(thr2Value > 137&& direction2 == 'f'){
+    analogWrite(bw2,0);
+    analogWrite(fw2, (thr2Value-128)*2);
+    digitalWrite(led,HIGH);
+  }else if(thr2Value > 137 && direction2 == 'b'){
+    direction2 = 'f';
+    analogWrite(fw2,0);
+    analogWrite(bw2,0);
+    delay(20);
+    digitalWrite(led,HIGH);
+    
+  }
+  else if (thr2Value > 117){
+    analogWrite(fw2,0);
+    analogWrite(bw2,0);
+    digitalWrite(led,LOW);
+  }else if(thr2Value <117&&direction2 == 'b'){
+    analogWrite(fw2,0);
+    analogWrite(bw2,(128-thr2Value)*2);
+    digitalWrite(led,HIGH);
+  }else if(thr2Value <117 
+  
+  &&direction2 == 'f'){
+    direction2 = 'b';
+    analogWrite(fw2,0);
+    analogWrite(bw2,0);
+    delay(20);
+    digitalWrite(led,HIGH);
+  }else{
+    delay (80);
+   
+  }
+
+
+
+
+
+
+
+  
+  
+  
+}
+
+void calibrate(){
+  int thrMaxD1, thrMaxD2;
+  int thrMinD1, thrMinD2;
+  
+    
+   
+      thrMax = pulseIn(thr,HIGH);
+     digitalWrite(led,HIGH);
+      analogWrite(fw,20);
+    delay(1000);
+    analogWrite(fw,0);
+    digitalWrite(led,LOW);//pull throtel to min after long beep and one flash
+  
+    while (pulseIn(thr,HIGH) > 1250){}
+      delay(400);
+      thrMin = pulseIn(thr,HIGH);
+      digitalWrite(led,HIGH);
+      analogWrite(fw,10);
+      delay(1000);
+      analogWrite(fw,0);
+    
+      thrMaxD1 = thrMax / 100;
+      thrMaxD2 = thrMax % (thrMaxD1 * 100);
+      thrMinD1 = thrMin / 100;
+      thrMinD2 = thrMin % (thrMinD1 * 100);
+
+      EEPROM.write(MaxAddr1,thrMaxD1);
+      EEPROM.write(MaxAddr2,thrMaxD2);
+      EEPROM.write(MinAddr1,thrMinD1);
+      EEPROM.write(MinAddr2,thrMinD2);
+      
+}
+void readConfig(){
+  int thrMaxD1 = EEPROM.read(MaxAddr1);
+  int thrMaxD2 = EEPROM.read(MaxAddr2);
+  int thrMinD1 = EEPROM.read(MinAddr1);
+  int thrMinD2 = EEPROM.read(MinAddr2);
+  thrMax = thrMaxD1*100 + thrMaxD2;
+  thrMin = thrMinD1*100 + thrMaxD2;
+  for(int i = 0; i< 5; i++){
+    digitalWrite(led,HIGH);
+    delay(150);   
+    digitalWrite(led,LOW);
+    delay(150);
+  }
+
+}
